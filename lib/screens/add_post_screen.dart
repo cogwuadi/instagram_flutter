@@ -1,12 +1,12 @@
-// import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-// import 'package:instagram_flutter/models/user.dart';
-// import 'package:instagram_flutter/providers/user_provider.dart';
+import 'package:instagram_flutter/models/user.dart';
+import 'package:instagram_flutter/resources/firestore_methods.dart';
 import 'package:instagram_flutter/utilities/colors.dart';
 import 'package:instagram_flutter/utilities/utilities.dart';
-// import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -17,6 +17,26 @@ class AddPostScreen extends StatefulWidget {
 
 class _AddPostScreenState extends State<AddPostScreen> {
   Uint8List? _file;
+  final TextEditingController _descriptionController = TextEditingController();
+
+  void postImage(
+    String uid,
+    String username,
+    String profImage,
+  ) async {
+    try {
+      String res = await FirestoreMethods().uploadPost(
+          _descriptionController.text, uid, _file!, username, profImage);
+
+      if (res == "success") {
+        showSnackBar("posted", context);
+      } else {
+        showSnackBar(res, context);
+      }
+    } catch (e) {
+      showSnackBar(e.toString(), context);
+    }
+  }
 
   _selectImage(BuildContext context) async {
     return showDialog(
@@ -51,14 +71,27 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   });
                 },
               ),
+              SimpleDialogOption(
+                padding: const EdgeInsets.all(20),
+                child: const Text("Cancel"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
             ],
           );
         });
   }
 
   @override
+  void dispose() {
+    super.dispose();
+    _descriptionController.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // final User user = Provider.of<UserProvider>(context).getUser;
+    final User user = Provider.of<UserProvider>(context).getUser;
 
     return _file == null
         ? Center(
@@ -78,7 +111,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
               centerTitle: false,
               actions: [
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () =>
+                      postImage(user.uid, user.username, user.photoUrl),
                   child: const Text(
                     "post",
                     style: TextStyle(
@@ -96,16 +130,17 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       backgroundImage: NetworkImage(
-                          "https://plus.unsplash.com/premium_photo-1661595096476-9319ca36c09e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHw0OHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=60"
-                          // user.photoUrl,
-                          ),
+                        // "https://plus.unsplash.com/premium_photo-1661595096476-9319ca36c09e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxlZGl0b3JpYWwtZmVlZHw0OHx8fGVufDB8fHx8&auto=format&fit=crop&w=500&q=60"
+                        user.photoUrl,
+                      ),
                     ),
                     SizedBox(
                       width: MediaQuery.of(context).size.width * 0.45,
-                      child: const TextField(
-                        decoration: InputDecoration(
+                      child: TextField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
                           hintText: "Write a caption...",
                           border: InputBorder.none,
                         ),
